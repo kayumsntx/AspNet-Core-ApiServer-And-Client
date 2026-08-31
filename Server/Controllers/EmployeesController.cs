@@ -22,7 +22,8 @@ namespace Server.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Employee>>> GetAllEmployees()
         {
-            var employee = await _context.Employees.Include(e => e.Experiences).ThenInclude(ex => ex.ExperienceTitle).ToListAsync();
+            var employee = await _context.Employees.Include(e => e.Experiences).ThenInclude(ex => ex.ExperienceTitle).AsNoTracking().ToListAsync();
+
             return Ok(employee);
         }
         [HttpGet("{id}")]
@@ -100,6 +101,87 @@ namespace Server.Controllers
             return Ok(employee);
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutEmployee(int id, [FromForm] EmployeeDTO dto)
+        {
+            if (id == 0) return BadRequest();
+            if (id != dto.EmployeeId) return BadRequest();
+            var existingEmployee = await _context.Employees.Include(e => e.Experiences).ThenInclude(ex => ex.ExperienceTitle).FirstOrDefaultAsync(e => e.EmployeeId == id);
+            if (existingEmployee == null) return NotFound();
+            string oldImageUrl = existingEmployee.ImageUrl;
+            string fileName = existingEmployee.ImageName;
+            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+            {
+                fileName = await SaveImageAsync(dto.ImageFile);
+                oldImageUrl = "/images/" + fileName;
+                var imagePath = Path.Combine(_env.WebRootPath, "images", existingEmployee.ImageName ?? "");
+                if (System.IO.File.Exists(imagePath))
+                {
+                    System.IO.File.Delete(imagePath);
+                }
+            }
+            existingEmployee.EmployeeId = id;
+            existingEmployee.ImageName = fileName;
+            existingEmployee.ImageUrl = oldImageUrl;
+            existingEmployee.EmployeeName = dto.EmployeeName;
+            existingEmployee.IsActive = dto.IsActive;
+            existingEmployee.JoinDate = dto.JoinDate;
+            var experiences = existingEmployee.Experiences;
+            _context.Experiences.RemoveRange(experiences);
+
+            if (!string.IsNullOrWhiteSpace(dto.ExperiencesString))
+            {
+                try
+                {
+                    string rawJson = dto.ExperiencesString.Trim();
+                    if (rawJson.StartsWith("{") && rawJson.EndsWith("}"))
+                    {
+                        rawJson = $"[{rawJson}]";
+                    }
+                    var options = new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+
+                    var newExperiences = System.Text.Json.JsonSerializer.Deserialize<List<ExperienceDTO>>(rawJson, options);
+                    if (newExperiences != null)
+                    {
+                        foreach (var item in newExperiences)
+                        {
+                            var titleExists = await _context.ExperiencesTitles.AnyAsync(t => t.ExperienceTitleId == item.ExperienceTitleId);
+                            if (!titleExists)
+                            {
+                                return BadRequest("Experience title not exists");
+                            }
+                            existingEmployee.Experiences.Add(new Experience
+                            {
+                                EmployeeId = id,
+                                ExperienceTitleId = item.ExperienceTitleId,
+                                Duration = item.Duration
+                            });
+                        }
+                    }
+                }
+                catch (System.Text.Json.JsonException ex)
+                {
+                    return BadRequest($"JSON Parsing Error: {ex.Message}. Received: {dto.ExperiencesString}");
+                }
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Employees.Any(e => e.EmployeeId == id)) return NotFound();
+                throw;
+            }
+
+            return NoContent();
+        }
+
+
         private async Task<string> SaveImageAsync(IFormFile imageFile)
         {
             string uploadDir = Path.Combine(_env.WebRootPath, "images");
@@ -115,19 +197,21 @@ namespace Server.Controllers
             }
             return filePath;
         }
+
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEmployee(int id)
         {
             var employee = await _context.Employees.FindAsync(id);
             if (employee == null) return NotFound();
             var imagePath = Path.Combine(_env.WebRootPath, "images", employee.ImageName ?? "");
-            if(System.IO.File.Exists(imagePath))
+            if (System.IO.File.Exists(imagePath))
             {
-                System.IO.File.Delete(imagePath);   
+                System.IO.File.Delete(imagePath);
             }
-          _context.Employees.Remove(employee);
+            _context.Employees.Remove(employee);
             await _context.SaveChangesAsync();
-            return Ok("employee");
+            return NoContent();
         }
     }
 }
