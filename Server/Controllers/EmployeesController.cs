@@ -26,6 +26,14 @@ namespace Server.Controllers
 
             return Ok(employee);
         }
+
+        [HttpGet("titles")]
+        public async Task<ActionResult<IEnumerable<ExperienceTitle>>> GetExperienceTitles()
+        {
+            var titles = await _context.ExperiencesTitles.ToListAsync();
+            return Ok(titles);
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<Employee>> GetEmployeeById(int id)
         {
@@ -213,5 +221,6 @@ namespace Server.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
+
     }
 }
