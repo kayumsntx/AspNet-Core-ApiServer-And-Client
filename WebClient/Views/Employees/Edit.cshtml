@@ -1,0 +1,70 @@
+﻿@model EmployeeDTO
+@{
+    string apiBaseUrl = "http://localhost:5280";
+}
+<div class="container mt-2">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Edit Employee: @Model.EmployeeName</h4>
+            <span class="badge bg-dark">ID: @Model.EmployeeId</span>
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-6 border-end">
+                        <input type="hidden" asp-for="EmployeeId" />
+                        <h5 class="text-primary pb-2 border-bottom">Basic Information</h5>
+                        <div class="form-group mb-2">
+                            <label asp-for="EmployeeName" class="form-label"></label>
+                            <input asp-for="EmployeeName" class="form-control" required />
+                        </div>
+                        <div class="form-check mb-2">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label">Currently Active</label>
+                        </div>
+                        <div class="form-group mb-2">
+                            <label asp-for="JoinDate" class="form-label"></label>
+                            <input asp-for="JoinDate" type="date" class="form-control" />
+                        </div>
+                        <div class="form-group mb-2">
+                            <img id="imgPreview" src="@(!string.IsNullOrEmpty(Model.ImageUrl) ? (apiBaseUrl + Model.ImageUrl) : "/images/noimage.png")" style="height:70px; width:70px" /><br />
+                            <label for="processFile">Profile Picture</label>
+                            <input id="processFile" asp-for="ImageFile" type="file" class="form-control" accept="image/*" onchange="previewImage(this)" style="visibility:hidden" />
+                        </div>
+                    </div>
+                    <div class="col-md-6 border-end">
+                        <partial name="_ExperienceEditor" model="ViewBag.ExperienceTitles" />
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-success">Save Employee</button>
+                        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        const ExistingExperiences=@Html.Raw(Model.ExperiencesString ?? "[]")
+        document.addEventListener("DOMContentLoaded",function(){
+            if(ExistingExperiences.length>0){
+            ExistingExperiences.forEach(exp=>{
+                let tId=exp.experienceTitleId|| exp.ExperienceTitleId;
+                let dur=exp.duration|| exp.Duration;
+                addRow(tId,dur)
+             } )
+            }
+        })
+
+        function previewImage(input){
+            if(input.files && input.files[0]){
+                const reader = new FileReader();
+                reader.onload = e => document.getElementById("imgPreview").src = e.target.result;
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+    </script>
+
+}

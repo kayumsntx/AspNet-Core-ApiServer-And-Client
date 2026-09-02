@@ -203,7 +203,7 @@ namespace Server.Controllers
             {
                 await imageFile.CopyToAsync(stream);
             }
-            return filePath;
+            return fileName;
         }
 
 

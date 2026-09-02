@@ -63,8 +63,8 @@ public class EmployeesController : Controller
                 Duration = x.Duration
             }), options)
         };
-        var titles = await service.GetExperienceTitlesAsync();
-        ViewBag.ExperienceTitles = titles;
+       
+        ViewBag.ExperienceTitles = await service.GetExperienceTitlesAsync();
         return View(dto);
     }
     [HttpPost]

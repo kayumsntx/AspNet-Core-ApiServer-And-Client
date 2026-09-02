@@ -1,0 +1,51 @@
+﻿@model List<ExperienceTitle>
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h5 class="text-primary border-bottom pb-2 flex-grow-1">Work Experiences</h5>
+    <button type="button" class="btn btn-sm btn-success" onclick="addRow()">Add Experience</button>
+</div>
+<table class="table table-hover align-middle" id="expTable">
+    <thead class="table-dark">
+        <tr>
+            <th style="width: 50%;">Experience Title</th>
+            <th style="width: 35%;">Duration (Months)</th>
+            <th style="width: 15%;">Action</th>
+        </tr>
+    </thead>
+    <tbody id="expBody">
+    </tbody>
+</table>
+<div id="emptyMessage" class="alert alert-light text-center">
+    No experiences added. Click "Add Experience" to include work history.
+</div>
+<script>
+    let index = 0;
+    const titles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model))
+    function addRow(selectedId = "", durationVal = "") {
+        document.getElementById("emptyMessage").style.display = "none";
+        let options = '<option value="">-- Select Title --</option>';
+        titles.forEach(item => {
+            let id = item.experienceTitleId || item.ExperienceTitleId;
+            let name = item.titleName || item.TitleName;
+            let isSelected = (id == selectedId) ? "selected" : "";
+            options += `<option value="${id}" ${isSelected}>${name}</option>`;
+        });
+        const tr = `
+            <tr id="row_${index}">
+                <td><select name="expList[${index}].ExperienceTitleId" class="form-select" required>${options}</select></td>
+                <td>
+                    <input name="expList[${index}].Duration" type="number" class="form-control" value="${durationVal}" required />
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(${index})">Remove</button>
+                </td>
+            </tr>`;
+        document.getElementById("expBody").insertAdjacentHTML('beforeend', tr);
+        index++;
+    }
+    function removeRow(id) {
+        document.getElementById(`row_${id}`).remove();
+        if (document.getElementById("expBody").rows.length === 0) {
+            document.getElementById("emptyMessage").style.display = "block";
+        }
+    }
+</script>
